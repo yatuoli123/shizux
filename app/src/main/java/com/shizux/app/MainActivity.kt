@@ -97,9 +97,8 @@ class MainActivity : Activity() {
         tv.setPadding(20, 12, 20, 12)
 
         btn.setOnClickListener {
-            val ok = rikka.shizuku.Shizuku.pingBinder()
-                    && rikka.shizuku.Shizuku.checkSelfPermission()
-                    == android.content.pm.PackageManager.PERMISSION_GRANTED
+            val granted = rikka.shizuku.Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED
+            val ok = rikka.shizuku.Shizuku.pingBinder() && granted
             tv.text = if (ok) {
                 try {
                     Runtime.getRuntime().exec(arrayOf("sh", "-c", "pm list packages"))
