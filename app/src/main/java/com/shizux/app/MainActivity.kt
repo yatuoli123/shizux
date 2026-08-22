@@ -1,3 +1,4 @@
+import rikka.shizuku.Shizuku
 package com.shizux.app
 
 import android.app.Activity
