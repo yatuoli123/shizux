@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.ShizuX" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#7C4DFF</item>
+        <item name="android:windowBackground">#7C4DFF</item>
+    </style>
+</resources>
