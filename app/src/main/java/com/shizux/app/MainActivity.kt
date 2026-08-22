@@ -24,6 +24,7 @@ class MainActivity : Activity() {
         val root = LinearLayout(this)
         root.orientation = LinearLayout.VERTICAL
         root.setBackgroundColor(Color.parseColor("#F5F5F5"))
+        root.fitsSystemWindows = true   // 关键：让根布局适配系统窗口（悬浮底部）
 
         val content = LinearLayout(this)
         content.orientation = LinearLayout.VERTICAL
@@ -51,7 +52,9 @@ class MainActivity : Activity() {
 
         root.addView(content)
         root.addView(bottom)
-        setContentView(root)
+        setContentView(root, android.view.WindowManager.LayoutParams(
+            android.view.WindowManager.LayoutParams.MATCH_PARENT,
+            android.view.WindowManager.LayoutParams.MATCH_PARENT))
         showPage(0)
     }
 
