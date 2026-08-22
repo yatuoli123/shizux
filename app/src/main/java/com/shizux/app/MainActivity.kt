@@ -33,27 +33,26 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         requestWindowFeature(Window.FEATURE_NO_TITLE)
 
-        // 包个垂直布局，让按钮垂直居中
         val root = LinearLayout(this)
         root.orientation = LinearLayout.VERTICAL
         root.gravity = Gravity.CENTER
         root.setBackgroundColor(Color.WHITE)
 
         val btn = Button(this)
+        btn.textSize = 18f
         btn.setTextColor(Color.WHITE)
-        btn.setBackgroundColor(Color.parseColor("#7C4DFF"))
         btn.text = "点击授权 Shizuku"
+        btn.setBackgroundResource(R.drawable.bg_capsule)
+        btn.setPadding(80, 24, 80, 24)
 
         btn.setOnClickListener { handleClick() }
 
         root.addView(btn)
         setContentView(root)
 
-        // 注册授权结果监听（必须在 onCreate 时注册）
         try {
             Shizuku.addRequestPermissionResultListener(listener)
         } catch (e: Exception) {
-            // 忽略，未授权前可能抛异常
         }
     }
 
@@ -74,7 +73,6 @@ class MainActivity : Activity() {
             if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(this, "已授权，运行正常", Toast.LENGTH_LONG).show()
             } else {
-                // 真正发起授权请求 → 系统会弹窗
                 Shizuku.requestPermission(requestCode)
             }
         } catch (e: Exception) {
