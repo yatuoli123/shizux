@@ -1,5 +1,4 @@
 package com.shizux.app
-
 import android.app.Activity
 import android.graphics.Color
 import android.os.Bundle
@@ -45,7 +44,7 @@ class MainActivity : Activity() {
         bottom.addView(btnHome)
         bottom.addView(btnSettings)
 
-        // 避开系统底部手势导航条，把导航栏抬到安全区之上
+        // 避开系统底部手势导航条
         val resId = resources.getIdentifier("navigation_bar_height", "dimen", "android")
         val navH = if (resId > 0) resources.getDimensionPixelSize(resId) else 0
         bottom.setPadding(0, 0, 0, navH)
