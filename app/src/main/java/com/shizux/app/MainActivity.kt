@@ -1,5 +1,9 @@
 package com.shizux.app
 import android.app.Activity
+import android.app.AlertDialog
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -32,6 +36,7 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
         }
 
+        // 读取按钮
         val readBtn = Button(this).apply {
             text = "读取应用列表"
             textSize = 18f
@@ -42,38 +47,13 @@ class MainActivity : Activity() {
             }
         }
 
-        val freezeBtn = Button(this).apply {
-            text = "① 冻结全部应用"
-            textSize = 17f
-            setTextColor(Color.WHITE)
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor("#7C4DFF"))
-                cornerRadius = 60f
-            }
-        }
-
-        val memBtn = Button(this).apply {
-            text = "② 查看内存信息"
-            textSize = 17f
-            setTextColor(Color.WHITE)
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor("#7C4DFF"))
-                cornerRadius = 60f
-            }
-        }
-
-        val clearBtn = Button(this).apply {
-            text = "③ 清理缓存"
-            textSize = 17f
-            setTextColor(Color.WHITE)
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor("#7C4DFF"))
-                cornerRadius = 60f
-            }
-        }
+        // 3个胶囊按钮
+        val freezeBtn = capsule("① 冻结全部应用", "pm list packages")
+        val memBtn = capsule("② 查看内存信息", "cat /proc/meminfo")
+        val clearBtn = capsule("③ 清理缓存", "pm list packages | head")
 
         log = TextView(this).apply {
-            textSize = 12f
+            textSize = 13f
             setTextColor(Color.DKGRAY)
             setPadding(0, 30, 0, 0)
         }
@@ -92,11 +72,67 @@ class MainActivity : Activity() {
 
         setContentView(root)
 
-        // 按钮点击逻辑
-        readBtn.setOnClickListener { runCmd("pm list packages") }
+        // 按钮点击事件
+        readBtn.setOnClickListener { showAppList() }
         freezeBtn.setOnClickListener { runCmd("pm list packages") }
         memBtn.setOnClickListener { runCmd("cat /proc/meminfo") }
         clearBtn.setOnClickListener { runCmd("pm list packages | head") }
+    }
+
+    private fun capsule(text: String, cmd: String): Button {
+        val btn = Button(this)
+        btn.text = text
+        btn.textSize = 17f
+        btn.setTextColor(Color.WHITE)
+        btn.background = GradientDrawable().apply {
+            setColor(Color.parseColor("#7C4DFF"))
+            cornerRadius = 40f
+        }
+        btn.layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, 70).apply {
+            setMargins(0, 15, 0, 15)
+        }
+        btn.setOnClickListener {
+            log.text = "执行中..."
+            Thread {
+                val result = try {
+                    Runtime.getRuntime().exec(arrayOf("sh", "-c", cmd))
+                        .inputStream.bufferedReader().use { it.readText() }
+                } catch (e: Exception) { "错误: ${e.message}" }
+                runOnUiThread { log.text = result }
+            }.start()
+        }
+        return btn
+    }
+
+    private fun showAppList() {
+        val ok = Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (!ok) {
+            log.text = "请先在 ShizuX 内点击授权按钮"
+            return
+        }
+
+        Thread {
+            val result = try {
+                Runtime.getRuntime().exec(arrayOf("sh", "-c", "pm list packages"))
+                    .inputStream.bufferedReader().use { it.readText() }
+            } catch (e: Exception) { "错误: ${e.message}" }
+
+            runOnUiThread {
+                val dialog = AlertDialog.Builder(this@MainActivity)
+                dialog.setTitle("已安装应用列表（${result.lines().size} 个）")
+                dialog.setMessage(result)
+
+                dialog.setPositiveButton("复制全部") { _, _ ->
+                    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("App List", result))
+                    log.text = "已复制到剪贴板"
+                }
+
+                dialog.setNeutralButton("关闭") { _, _ -> }
+                dialog.show()
+            }
+        }.start()
     }
 
     private fun runCmd(cmd: String) {
@@ -110,12 +146,8 @@ class MainActivity : Activity() {
             val result = try {
                 Runtime.getRuntime().exec(arrayOf("sh", "-c", cmd))
                     .inputStream.bufferedReader().use { it.readText() }
-            } catch (e: Exception) {
-                "错误: ${e.message}"
-            }
-            runOnUiThread {
-                log.text = result
-            }
+            } catch (e: Exception) { "错误: ${e.message}" }
+            runOnUiThread { log.text = result }
         }.start()
     }
 }
