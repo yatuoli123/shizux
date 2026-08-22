@@ -32,7 +32,7 @@ android {
 
     buildFeatures {
         compose = true
-    }
+}
 }
 
 dependencies {
@@ -42,4 +42,6 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.activity:activity-compose:1.9.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
+    implementation("dev.rikka.shizuku:api:13.1.5")
+    implementation("dev.rikka.shizuku:provider:13.1.5")
 }
