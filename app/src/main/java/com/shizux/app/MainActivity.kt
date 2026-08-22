@@ -7,143 +7,184 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
+import rikka.shizuku.Shizuku
 
 class MainActivity : Activity() {
 
-    private lateinit var pageHome: LinearLayout
-    private lateinit var pageSettings: LinearLayout
-    private lateinit var btnHome: Button
-    private lateinit var btnSettings: Button
+  private var currentPage = 0
+  private lateinit var log: TextView
 
-    override fun onCreate(b: Bundle?) {
-        super.onCreate(b)
-        requestWindowFeature(Window.FEATURE_NO_TITLE)
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    requestWindowFeature(Window.FEATURE_NO_TITLE)
 
-        val root = LinearLayout(this)
-        root.orientation = LinearLayout.VERTICAL
-        root.setBackgroundColor(Color.parseColor("#F5F5F5"))
-        root.fitsSystemWindows = true   // 关键：让根布局适配系统窗口（悬浮底部）
-
-        val content = LinearLayout(this)
-        content.orientation = LinearLayout.VERTICAL
-        content.layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
-
-        pageHome = buildPageHome()
-        pageSettings = buildPageSettings()
-        content.addView(pageHome)
-        content.addView(pageSettings)
-
-        val bottom = LinearLayout(this)
-        bottom.orientation = LinearLayout.HORIZONTAL
-        btnHome = makeNavButton("主页")
-        btnSettings = makeNavButton("设置")
-        btnHome.setOnClickListener { showPage(0) }
-        btnSettings.setOnClickListener { showPage(1) }
-        bottom.addView(btnHome)
-        bottom.addView(btnSettings)
-
-        // 避开系统底部手势导航条
-        val resId = resources.getIdentifier("navigation_bar_height", "dimen", "android")
-        val navH = if (resId > 0) resources.getDimensionPixelSize(resId) else 0
-        bottom.setPadding(0, 0, 0, navH)
-
-        root.addView(content)
-        root.addView(bottom)
-        setContentView(root, android.view.WindowManager.LayoutParams(
-            android.view.WindowManager.LayoutParams.MATCH_PARENT,
-            android.view.WindowManager.LayoutParams.MATCH_PARENT))
-        showPage(0)
+    val root = LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      setBackgroundColor(Color.WHITE)
+      fitsSystemWindows = true
     }
 
-    private fun showPage(index: Int) {
-        pageHome.visibility = if (index == 0) View.VISIBLE else View.GONE
-        pageSettings.visibility = if (index == 1) View.VISIBLE else View.GONE
-        val active = Color.parseColor("#7C4DFF")
-        btnHome.setTextColor(if (index == 0) active else Color.GRAY)
-        btnSettings.setTextColor(if (index == 1) active else Color.GRAY)
+    val container = FrameLayout(this).apply {
+      layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
+      )
     }
 
-    private fun makeNavButton(label: String): Button {
-        val b = Button(this)
-        b.text = label
-        b.setBackgroundColor(Color.TRANSPARENT)
-        b.layoutParams = LinearLayout.LayoutParams(0, 80, 1f)
-        return b
+    val nav = LinearLayout(this).apply {
+      orientation = LinearLayout.HORIZONTAL
+      setBackgroundColor(Color.parseColor("#E0E0E0"))
+      setPadding(0, 8, 0, 8)
+      fitsSystemWindows = true
     }
 
-    private fun buildPageHome(): LinearLayout {
-        val layout = LinearLayout(this)
-        layout.orientation = LinearLayout.VERTICAL
-        layout.gravity = Gravity.CENTER
-        layout.layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+    val homePage = homePage()
+    val settingsPage = settingsPage()
+    val toolsPage = toolsPage()
 
-        val title = TextView(this)
-        title.text = "ShizuX"
-        title.textSize = 30f
-        title.gravity = Gravity.CENTER
-        title.setTextColor(Color.parseColor("#7C4DFF"))
+    container.addView(homePage)
+    container.addView(settingsPage)
+    container.addView(toolsPage)
 
-        val hint = TextView(this)
-        hint.text = "Unlock Android, Root-Free."
-        hint.textSize = 14f
-        hint.setTextColor(Color.GRAY)
-        hint.gravity = Gravity.CENTER
+    showPage(0)
 
-        val btn = Button(this)
-        btn.text = "读取应用列表"
-        btn.setTextColor(Color.WHITE)
-        btn.textSize = 16f
-        btn.setBackgroundResource(R.drawable.bg_capsule)
-        btn.layoutParams = LinearLayout.LayoutParams(220, 96).apply { gravity = Gravity.CENTER }
+    nav.addView(navBtn("首页", 0, homePage))
+    nav.addView(navBtn("设置", 1, settingsPage))
+    nav.addView(navBtn("工具箱", 2, toolsPage))
 
-        val tv = TextView(this)
-        tv.setTextColor(Color.DKGRAY)
-        tv.textSize = 12f
-        tv.setPadding(20, 12, 20, 12)
+    root.addView(container)
+    root.addView(nav)
 
-        btn.setOnClickListener {
-            val granted = rikka.shizuku.Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED
-            val ok = rikka.shizuku.Shizuku.pingBinder() && granted
-            tv.text = if (ok) {
-                try {
-                    Runtime.getRuntime().exec(arrayOf("sh", "-c", "pm list packages"))
-                        .inputStream.bufferedReader().readText()
-                } catch (e: Exception) { "执行失败" }
-            } else "未授权 Shizuku"
+    setContentView(root)
+  }
+
+  private fun showPage(index: Int) {
+    currentPage = index
+    val container = (root as LinearLayout).getChildAt(0) as FrameLayout
+    for (i in 0 until container.childCount) {
+      container.getChildAt(i).visibility = if (i == index) View.VISIBLE else View.GONE
+    }
+  }
+
+  private fun navBtn(name: String, idx: Int, view: View): View {
+    val btn = TextView(this)
+    btn.text = name
+    btn.textSize = 14f
+    btn.setTextColor(Color.parseColor("#7C4DFF"))
+    btn.gravity = Gravity.CENTER
+    btn.setPadding(0, 12, 0, 12)
+    btn.layoutParams = LinearLayout.LayoutParams(
+      LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT, 1f
+    )
+    btn.setOnClickListener { showPage(idx) }
+    return btn
+  }
+
+  private fun homePage(): LinearLayout {
+    val v = LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      gravity = Gravity.CENTER
+      setBackgroundColor(Color.WHITE)
+    }
+    val t = TextView(this).apply {
+      text = "ShizuX 主面板"
+      textSize = 24f
+      setTextColor(Color.parseColor("#7C4DFF"))
+    }
+    val btn = Button(this).apply {
+      text = "读取已安装应用列表"
+      textSize = 16f
+      setTextColor(Color.WHITE)
+      setBackgroundResource(R.drawable.bg_capsule)
+    }
+    val out = TextView(this).apply { textSize = 12f; setTextColor(Color.DKGRAY) }
+    btn.setOnClickListener {
+      out.text = "正在读取...\n"
+      Thread {
+        val result = try {
+          val p = Runtime.getRuntime().exec(arrayOf("sh", "-c", "pm list packages"))
+          p.inputStream.bufferedReader().use { it.readText() }
+        } catch (e: Exception) { "错误: ${e.message}" }
+        runOnUiThread { out.text = result }
+      }.start()
+    }
+    v.addView(t)
+    v.addView(btn, FrameLayout.LayoutParams(500, 80).also { it.topMargin = 40 })
+    v.addView(out, LinearLayout.LayoutParams(
+      LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f).also { it.topMargin = 30 })
+    return v
+  }
+
+  private fun settingsPage(): LinearLayout {
+    val v = LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      gravity = Gravity.CENTER
+      setBackgroundColor(Color.WHITE)
+    }
+    v.addView(TextView(this).apply {
+      text = "设置页面"
+      textSize = 22f
+      setTextColor(Color.parseColor("#7C4DFF"))
+    })
+    return v
+  }
+
+  private fun toolsPage(): LinearLayout {
+    val v = LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      setPadding(20, 40, 20, 20)
+      setBackgroundColor(Color.WHITE)
+    }
+    v.addView(TextView(this).apply {
+      text = "工具箱"
+      textSize = 26f
+      setTextColor(Color.parseColor("#7C4DFF"))
+    })
+    fun Button.setup(text: String, cmd: String) {
+      this.text = text
+      this.textSize = 17f
+      this.setTextColor(Color.WHITE)
+      this.setBackgroundResource(R.drawable.bg_capsule)
+      val p = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT, 70
+      ).apply { setMargins(0, 15, 0, 15) }
+      this.layoutParams = p
+      this.setOnClickListener {
+        val ok = Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (!ok) {
+          log.text = "请先在 ShizuX 内点击授权按钮"
+          return@setOnClickListener
         }
-
-        layout.addView(title)
-        layout.addView(hint)
-        layout.addView(btn)
-        layout.addView(tv)
-        return layout
+        log.text = "执行中..."
+        Thread {
+          val result = try {
+            Runtime.getRuntime().exec(arrayOf("sh", "-c", cmd)).inputStream.bufferedReader().use { it.readText() }
+          } catch (e: Exception) { "错误: ${e.message}" }
+          runOnUiThread { log.text = result }
+        }.start()
+      }
     }
-
-    private fun buildPageSettings(): LinearLayout {
-        val layout = LinearLayout(this)
-        layout.orientation = LinearLayout.VERTICAL
-        layout.gravity = Gravity.CENTER
-        layout.layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-
-        val t = TextView(this)
-        t.text = "设置页"
-        t.textSize = 24f
-        t.setTextColor(Color.parseColor("#7C4DFF"))
-        t.gravity = Gravity.CENTER
-
-        val info = TextView(this)
-        info.text = "在这里可以配置玩法。\n功能开发中…"
-        info.textSize = 14f
-        info.setTextColor(Color.GRAY)
-        info.gravity = Gravity.CENTER
-
-        layout.addView(t)
-        layout.addView(info)
-        return layout
+    v.addView(Button(this).apply { setup("① 冻结全部应用", "pm list packages") })
+    v.addView(Button(this).apply { setup("② 查看内存信息", "cat /proc/meminfo") })
+    v.addView(Button(this).apply { setup("③ 清理缓存", "pm list packages | head") })
+    log = TextView(this).apply {
+      textSize = 14f
+      setTextColor(Color.DKGRAY)
+      setPadding(0, 20, 0, 20)
     }
+    v.addView(ScrollView(this).apply {
+      addView(log)
+      layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
+      )
+    })
+    return v
+  }
+
+  companion object {
+    lateinit var root: LinearLayout
+  }
 }
