@@ -1,90 +1,139 @@
 package com.shizux.app
 
 import android.app.Activity
-import android.app.AlertDialog
-import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
+import android.view.View
+import android.view.ViewGroup
 import android.view.Window
 import android.widget.Button
 import android.widget.LinearLayout
-import android.widget.Toast
-import rikka.shizuku.Shizuku
+import android.widget.TextView
 
 class MainActivity : Activity() {
 
-    private val requestCode = 10001
+    private lateinit var pageHome: LinearLayout
+    private lateinit var pageSettings: LinearLayout
+    private lateinit var btnHome: Button
+    private lateinit var btnSettings: Button
 
-    private val listener = object : Shizuku.OnRequestPermissionResultListener {
-        override fun onRequestPermissionResult(code: Int, grantResult: Int) {
-            if (code == requestCode) {
-                val ok = grantResult == PackageManager.PERMISSION_GRANTED
-                runOnUiThread {
-                    Toast.makeText(this@MainActivity,
-                        if (ok) "已授权，运行正常" else "你拒绝了授权",
-                        Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onCreate(b: Bundle?) {
+        super.onCreate(b)
         requestWindowFeature(Window.FEATURE_NO_TITLE)
 
         val root = LinearLayout(this)
         root.orientation = LinearLayout.VERTICAL
-        root.gravity = Gravity.CENTER
-        root.setBackgroundColor(Color.WHITE)
+        root.setBackgroundColor(Color.parseColor("#F5F5F5"))
+
+        val content = LinearLayout(this)
+        content.orientation = LinearLayout.VERTICAL
+        content.layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
+
+        pageHome = buildPageHome()
+        pageSettings = buildPageSettings()
+        content.addView(pageHome)
+        content.addView(pageSettings)
+
+        val bottom = LinearLayout(this)
+        bottom.orientation = LinearLayout.HORIZONTAL
+        btnHome = makeNavButton("主页")
+        btnSettings = makeNavButton("设置")
+        btnHome.setOnClickListener { showPage(0) }
+        btnSettings.setOnClickListener { showPage(1) }
+        bottom.addView(btnHome)
+        bottom.addView(btnSettings)
+
+        root.addView(content)
+        root.addView(bottom)
+        setContentView(root)
+        showPage(0)
+    }
+
+    private fun showPage(index: Int) {
+        pageHome.visibility = if (index == 0) View.VISIBLE else View.GONE
+        pageSettings.visibility = if (index == 1) View.VISIBLE else View.GONE
+        val active = Color.parseColor("#7C4DFF")
+        btnHome.setTextColor(if (index == 0) active else Color.GRAY)
+        btnSettings.setTextColor(if (index == 1) active else Color.GRAY)
+    }
+
+    private fun makeNavButton(label: String): Button {
+        val b = Button(this)
+        b.text = label
+        b.setBackgroundColor(Color.TRANSPARENT)
+        b.layoutParams = LinearLayout.LayoutParams(0, 80, 1f)
+        return b
+    }
+
+    private fun buildPageHome(): LinearLayout {
+        val layout = LinearLayout(this)
+        layout.orientation = LinearLayout.VERTICAL
+        layout.gravity = Gravity.CENTER
+
+        val title = TextView(this)
+        title.text = "ShizuX"
+        title.textSize = 30f
+        title.gravity = Gravity.CENTER
+        title.setTextColor(Color.parseColor("#7C4DFF"))
+
+        val hint = TextView(this)
+        hint.text = "Unlock Android, Root-Free."
+        hint.textSize = 14f
+        hint.setTextColor(Color.GRAY)
+        hint.gravity = Gravity.CENTER
 
         val btn = Button(this)
-        btn.textSize = 18f
+        btn.text = "读取应用列表"
         btn.setTextColor(Color.WHITE)
-        btn.text = "点击授权 Shizuku"
+        btn.textSize = 16f
         btn.setBackgroundResource(R.drawable.bg_capsule)
-        btn.setPadding(80, 24, 80, 24)
+        btn.layoutParams = LinearLayout.LayoutParams(220, 96).apply { gravity = Gravity.CENTER }
 
-        btn.setOnClickListener { handleClick() }
+        val tv = TextView(this)
+        tv.setTextColor(Color.DKGRAY)
+        tv.textSize = 12f
+        tv.setPadding(20, 12, 20, 12)
 
-        root.addView(btn)
-        setContentView(root)
-
-        try {
-            Shizuku.addRequestPermissionResultListener(listener)
-        } catch (e: Exception) {
+        btn.setOnClickListener {
+            val ok = rikka.shizuku.Shizuku.pingBinder()
+                    && rikka.shizuku.Shizuku.checkSelfPermission()
+                    == android.content.pm.PackageManager.PERMISSION_GRANTED
+            tv.text = if (ok) {
+                try {
+                    Runtime.getRuntime().exec(arrayOf("sh", "-c", "pm list packages"))
+                        .inputStream.bufferedReader().readText()
+                } catch (e: Exception) { "执行失败" }
+            } else "未授权 Shizuku"
         }
+
+        layout.addView(title)
+        layout.addView(hint)
+        layout.addView(btn)
+        layout.addView(tv)
+        return layout
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        try {
-            Shizuku.removeRequestPermissionResultListener(listener)
-        } catch (e: Exception) {
-        }
-    }
+    private fun buildPageSettings(): LinearLayout {
+        val layout = LinearLayout(this)
+        layout.orientation = LinearLayout.VERTICAL
+        layout.gravity = Gravity.CENTER
 
-    private fun handleClick() {
-        try {
-            if (!Shizuku.pingBinder()) {
-                showDialog("未检测到 Shizuku", "请先安装并启动 Shizuku 应用，然后回到这里重试。")
-                return
-            }
-            if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "已授权，运行正常", Toast.LENGTH_LONG).show()
-            } else {
-                Shizuku.requestPermission(requestCode)
-            }
-        } catch (e: Exception) {
-            Toast.makeText(this, "Shizuku 错误: " + e.javaClass.simpleName, Toast.LENGTH_LONG).show()
-        }
-    }
+        val t = TextView(this)
+        t.text = "设置页"
+        t.textSize = 24f
+        t.setTextColor(Color.parseColor("#7C4DFF"))
+        t.gravity = Gravity.CENTER
 
-    private fun showDialog(title: String, msg: String) {
-        AlertDialog.Builder(this)
-            .setTitle(title)
-            .setMessage(msg)
-            .setPositiveButton("好", null)
-            .show()
+        val info = TextView(this)
+        info.text = "在这里可以配置玩法。\n功能开发中…"
+        info.textSize = 14f
+        info.setTextColor(Color.GRAY)
+        info.gravity = Gravity.CENTER
+
+        layout.addView(t)
+        layout.addView(info)
+        return layout
     }
 }
