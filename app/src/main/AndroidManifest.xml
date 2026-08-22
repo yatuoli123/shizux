@@ -5,7 +5,8 @@
 
     <application
         android:allowBackup="true"
-        android:label="ShizuX">
+        android:label="ShizuX"
+        android:theme="@style/Theme.ShizuX">
         <activity
             android:name=".MainActivity"
             android:exported="true">
